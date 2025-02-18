@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genotype Frequency Simulation</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        svg { border: 1px solid black; margin-top: 20px; }
+        .slider-container { margin: 10px 0; }
+        table { margin: 10px auto; border-collapse: collapse; }
+        th, td { border: 1px solid black; padding: 5px; }
+        .param-display { margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h2>Genotype Frequency Evolution Under Inbreeding and Selection</h2>
+    
+    
+    <h3>Current Parameter Settings</h3>
+    <table id="paramDisplay">
+        <tr><th>Parameter</th><th>Value</th></tr>
+    </table>
+    
+    <svg id="plot" width="500" height="300">
+        <text x="250" y="290" text-anchor="middle">Generations</text>
+        <text x="10" y="150" transform="rotate(-90, 10, 150)" text-anchor="middle">Frequency</text>
+    </svg>
+    <svg id="legend" width="100" height="100">
+        <text x="15" y="15" >Genotype</text>
+        <text x="50" y="40" >AA</text>
+	<circle cx="35" cy="33" r="2" fill="blue"></circle>
+        <text x="50" y="65" >Aa</text>
+	<circle cx="35" cy="58" r="2" fill="green"></circle>
+        <text x="50" y="90" >aa</text>
+	<circle cx="35" cy="83" r="2" fill="red"></circle>
+    </svg>
+    <h3>Adjust Parameters</h3>
+    <div>Generations: <input type="number" id="generations" value="50" min="1" max="10000"> <button onclick="updatePlot()">Update</button></div>
+    <div class="slider-container">p0: <input type="range" id="p0" min="0" max="1" step="0.01" value="0.25" oninput="updatePlot()"></div>
+    <div class="slider-container">s_aa: <input type="range" id="s_aa" min="0" max="1" step="0.01" value="0.1" oninput="updatePlot()"></div>
+    <div class="slider-container">s_Aa: <input type="range" id="s_Aa" min="-1" max="1" step="0.01" value="0" oninput="updatePlot()"></div>
+    <div class="slider-container">F: <input type="range" id="F" min="0" max="1" step="0.01" value="0.5" oninput="updatePlot()"></div>
+    
+    <script>
+        function simulateFrequencies(p0, s_aa, s_Aa, F, generations) {
+            let data = [];
+            let p = p0;
+            for (let t = 0; t < generations; t++) {
+                let q = 1 - p;
+                let P_AA = (p**2 + (F * p * q));
+                let P_Aa = (2 * p * q * (1 - F));
+                let P_aa = (q**2 + (F * p * q));
+                let w_AA = 1;
+                let w_Aa = 1 - s_Aa;
+                let w_aa = 1 - s_aa;
+                let w_bar = P_AA * w_AA + P_Aa * w_Aa + P_aa * w_aa;
+                let p_next = ((P_AA * w_AA) + (0.5 * P_Aa * w_Aa)) / w_bar;
+                data.push({ t, P_AA, P_Aa, P_aa });
+                p = p_next;
+            }
+            return data;
+        }
+        
+        function updatePlot() {
+            let generations = parseInt(document.getElementById('generations').value);
+            let p0 = parseFloat(document.getElementById('p0').value);
+            let s_aa = parseFloat(document.getElementById('s_aa').value);
+            let s_Aa = parseFloat(document.getElementById('s_Aa').value);
+            let F = parseFloat(document.getElementById('F').value);
+            let data = simulateFrequencies(p0, s_aa, s_Aa, F, generations);
+            let svg = document.getElementById("plot");
+            svg.innerHTML = "<text x='250' y='290' text-anchor='middle'>Generations</text> <text x='20' y='150' transform='rotate(-90, 20, 150)' text-anchor='middle'>Frequency</text> <text x='10' y='295' text-anchor='left'>0</text> <text x='10' y='15' text-anchor='left'>1</text>" ;
+	    svg.innerHTML += `<text x='480' y='290' text-anchor='right'>${generations}</text>`;
+            data.forEach(d => {
+                let x = (d.t / generations) * 500;
+                let y_AA = 300 - (d.P_AA * 300);
+                let y_Aa = 300 - (d.P_Aa * 300);
+                let y_aa = 300 - (d.P_aa * 300);
+                svg.innerHTML += `<circle cx="${x}" cy="${y_AA}" r="2" fill="blue"></circle>`;
+                svg.innerHTML += `<circle cx="${x}" cy="${y_Aa}" r="2" fill="green"></circle>`;
+                svg.innerHTML += `<circle cx="${x}" cy="${y_aa}" r="2" fill="red"></circle>`;
+            });
+            let paramTable = document.getElementById("paramDisplay");
+            paramTable.innerHTML = `<tr><th>Parameter</th><th>Var</th><th>Value</th></tr>` +
+                `<tr><td>Generations</td><td>G</td><td>${generations}</td></tr>` +
+                `<tr><td>Initial allele A frequency</td><td>p0</td><td>${p0}</td></tr>` +
+                `<tr><td>Selection against aa</td><td>s_aa</td><td>${s_aa}</td></tr>` +
+                `<tr><td>Selection against Aa</td><td>s_Aa</td><td>${s_Aa}</td></tr>` +
+                `<tr><td>Inbreeding coefficient</td><td>F</td><td>${F}</td></tr>` 
+        }
+        updatePlot();
+    </script>
+</body>
+</html>
+
